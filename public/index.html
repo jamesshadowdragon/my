@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitHub ZIP Pusher</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font-family: Inter, system-ui, sans-serif; background: #0b0f19; color: #f5f7fb;
+    }
+    .card {
+      width: min(680px, 92vw); padding: 30px; border: 1px solid #252b3a;
+      border-radius: 20px; background: #111827; box-shadow: 0 20px 60px #0008;
+    }
+    h1 { margin: 0 0 8px; }
+    .sub { color: #9ca3af; margin-bottom: 25px; }
+    label { display:block; margin: 16px 0 7px; font-weight: 700; }
+    input, button {
+      width: 100%; padding: 13px 14px; border-radius: 10px;
+      border: 1px solid #30384a; background: #0b1220; color: white; font-size: 15px;
+    }
+    input[type=file] { padding: 11px; }
+    button {
+      margin-top: 22px; background: #fff; color: #111827; border: 0;
+      font-weight: 800; cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: wait; }
+    #status { margin-top: 18px; padding: 13px; border-radius: 10px; display:none; white-space: pre-wrap; }
+    .ok { display:block !important; background:#12351f; color:#b7f7c8; }
+    .err { display:block !important; background:#3b1717; color:#ffc0c0; }
+    code { color:#c4b5fd; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>📦 GitHub ZIP Pusher</h1>
+    <div class="sub">Upload a ZIP and push its contents directly into a GitHub repository.</div>
+
+    <form id="form">
+      <label>ZIP file</label>
+      <input id="zip" type="file" accept=".zip,application/zip" required>
+
+      <label>GitHub owner / username</label>
+      <input id="owner" placeholder="your-username" required>
+
+      <label>Repository name</label>
+      <input id="repo" placeholder="my-repository" required>
+
+      <label>Branch</label>
+      <input id="branch" value="main">
+
+      <button id="btn" type="submit">🚀 Push to GitHub</button>
+    </form>
+
+    <div id="status"></div>
+  </main>
+
+<script>
+const form = document.getElementById("form");
+const status = document.getElementById("status");
+const btn = document.getElementById("btn");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const file = document.getElementById("zip").files[0];
+  if (!file) return;
+
+  const data = new FormData();
+  data.append("zip", file);
+  data.append("owner", document.getElementById("owner").value);
+  data.append("repo", document.getElementById("repo").value);
+  data.append("branch", document.getElementById("branch").value || "main");
+
+  btn.disabled = true;
+  status.className = "";
+  status.style.display = "block";
+  status.textContent = "Uploading and pushing files…";
+
+  try {
+    const r = await fetch("/api/push", { method: "POST", body: data });
+    const result = await r.json();
+    if (!r.ok || !result.ok) throw new Error(result.error || "Upload failed");
+
+    status.className = "ok";
+    status.innerHTML =
+      `✅ Done! ${result.files} files pushed to ${result.owner}/${result.repo} (${result.branch}).<br>` +
+      `<a href="${result.url}" target="_blank" rel="noopener" style="color:inherit">${result.url}</a>`;
+  } catch (err) {
+    status.className = "err";
+    status.textContent = "❌ " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
